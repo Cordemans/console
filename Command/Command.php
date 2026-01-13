@@ -563,9 +563,10 @@ class Command implements SignalableCommandInterface
             '%command.name%',
             '%command.full_name%',
         ];
+        $script = $_SERVER['SCRIPT_NAME'] ?? $_SERVER['argv'][0];
         $replacements = [
             $name,
-            $isSingleCommand ? $_SERVER['PHP_SELF'] : $_SERVER['PHP_SELF'].' '.$name,
+            $isSingleCommand ? $script : $script.' '.$name,
         ];
 
         return str_replace($placeholders, $replacements, $this->getHelp() ?: $this->getDescription());
