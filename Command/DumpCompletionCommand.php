@@ -31,7 +31,7 @@ final class DumpCompletionCommand extends Command
 
     protected function configure(): void
     {
-        $fullCommand = $_SERVER['PHP_SELF'];
+        $fullCommand = $_SERVER['SCRIPT_NAME'] ?? $_SERVER['argv'][0];
         $commandName = basename($fullCommand);
         $fullCommand = @realpath($fullCommand) ?: $fullCommand;
 
