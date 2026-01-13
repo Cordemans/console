@@ -1,7 +1,7 @@
 {
-    "name": "symfony/console",
+    "name": "cordemans/console",
     "type": "library",
-    "description": "Eases the creation of beautiful and testable command line interfaces",
+    "description": "symfony/console fork with PHP_SELF replaced",
     "keywords": ["console", "cli", "command-line", "terminal"],
     "homepage": "https://symfony.com",
     "license": "MIT",
@@ -43,5 +43,8 @@
             "/Tests/"
         ]
     },
+    "replace": {
+        "symfony/console": "*"
+    }
     "minimum-stability": "dev"
 }
