@@ -45,6 +45,6 @@
     },
     "replace": {
         "symfony/console": "*"
-    }
+    },
     "minimum-stability": "dev"
 }
