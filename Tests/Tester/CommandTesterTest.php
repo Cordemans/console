@@ -14,7 +14,10 @@ namespace Symfony\Component\Console\Tests\Tester;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Attribute\Argument;
+use Symfony\Component\Console\Attribute\AskChoice;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Exception\LogicException;
 use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -30,7 +33,9 @@ use Symfony\Component\Console\Tests\Fixtures\InvokableExtendingCommandTestComman
 use Symfony\Component\Console\Tests\Fixtures\InvokableTestCommand;
 use Symfony\Component\Console\Tests\Fixtures\InvokableWithInputTestCommand;
 use Symfony\Component\Console\Tests\Fixtures\InvokableWithInteractiveAttributesTestCommand;
+use Symfony\Component\Console\Tests\Fixtures\InvokableWithInteractiveChoiceAttributeTestCommand;
 use Symfony\Component\Console\Tests\Fixtures\InvokableWithInteractiveHiddenQuestionAttributeTestCommand;
+use Symfony\Component\Console\Tests\Fixtures\MethodBasedTestCommand;
 
 class CommandTesterTest extends TestCase
 {
@@ -42,7 +47,7 @@ class CommandTesterTest extends TestCase
         $this->command = new Command('foo');
         $this->command->addArgument('command');
         $this->command->addArgument('foo');
-        $this->command->setCode(function (OutputInterface $output): int {
+        $this->command->setCode(static function (OutputInterface $output): int {
             $output->writeln('foo');
 
             return 0;
@@ -106,7 +111,7 @@ class CommandTesterTest extends TestCase
         $application->setAutoExit(false);
 
         $command = new Command('foo');
-        $command->setCode(function (OutputInterface $output): int {
+        $command->setCode(static function (OutputInterface $output): int {
             $output->writeln('foo');
 
             return 0;
@@ -130,7 +135,7 @@ class CommandTesterTest extends TestCase
 
         $command = new Command('foo');
         $command->setHelperSet(new HelperSet([new QuestionHelper()]));
-        $command->setCode(function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
+        $command->setCode(static function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
             $helper = $command->getHelper('question');
             $helper->ask($input, $output, new Question($questions[0]));
             $helper->ask($input, $output, new Question($questions[1]));
@@ -153,7 +158,7 @@ class CommandTesterTest extends TestCase
 
         $command = new Command('foo');
         $command->setHelperSet(new HelperSet([new QuestionHelper()]));
-        $command->setCode(function (InputInterface $input, OutputInterface $output) use ($question, $command): int {
+        $command->setCode(static function (InputInterface $input, OutputInterface $output) use ($question, $command): int {
             $output->write($command->getHelper('question')->ask($input, $output, (new Question($question))->setMultiline(true)));
             $output->write(stream_get_contents($input->getStream()));
 
@@ -183,7 +188,7 @@ class CommandTesterTest extends TestCase
 
         $command = new Command('foo');
         $command->setHelperSet(new HelperSet([new QuestionHelper()]));
-        $command->setCode(function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
+        $command->setCode(static function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
             $helper = $command->getHelper('question');
             $helper->ask($input, $output, new Question($questions[0], 'Bobby'));
             $helper->ask($input, $output, new Question($questions[1], 'Fine'));
@@ -210,7 +215,7 @@ class CommandTesterTest extends TestCase
 
         $command = new Command('foo');
         $command->setHelperSet(new HelperSet([new QuestionHelper()]));
-        $command->setCode(function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
+        $command->setCode(static function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
             $helper = $command->getHelper('question');
             $helper->ask($input, $output, new ChoiceQuestion('choice', ['a', 'b']));
             $helper->ask($input, $output, new Question($questions[0]));
@@ -239,7 +244,7 @@ class CommandTesterTest extends TestCase
 
         $command = new Command('foo');
         $command->setHelperSet(new HelperSet([new QuestionHelper()]));
-        $command->setCode(function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
+        $command->setCode(static function (InputInterface $input, OutputInterface $output) use ($questions, $command): int {
             $helper = $command->getHelper('question');
             $helper->ask($input, $output, new ChoiceQuestion('choice', ['a', 'b']));
             $helper->ask($input, $output, new Question($questions[0]));
@@ -266,7 +271,7 @@ class CommandTesterTest extends TestCase
         ];
 
         $command = new Command('foo');
-        $command->setCode(function (InputInterface $input, OutputInterface $output) use ($questions): int {
+        $command->setCode(static function (InputInterface $input, OutputInterface $output) use ($questions): int {
             $io = new SymfonyStyle($input, $output);
             $io->ask($questions[0]);
             $io->ask($questions[1]);
@@ -287,7 +292,7 @@ class CommandTesterTest extends TestCase
         $command = new Command('foo');
         $command->addArgument('command');
         $command->addArgument('foo');
-        $command->setCode(function (OutputInterface $output): int {
+        $command->setCode(static function (OutputInterface $output): int {
             $output->getErrorOutput()->write('foo');
 
             return 0;
@@ -322,6 +327,26 @@ class CommandTesterTest extends TestCase
         $tester->assertCommandIsSuccessful();
     }
 
+    public function testCallableMethodCommands()
+    {
+        $command = new MethodBasedTestCommand();
+
+        $tester = new CommandTester($command);
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+        $this->assertSame('cmd0', $tester->getDisplay());
+
+        $tester = new CommandTester($command->cmd1(...));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+        $this->assertSame('cmd1', $tester->getDisplay());
+
+        $tester = new CommandTester($command->cmd2(...));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+        $this->assertSame('cmd2', $tester->getDisplay());
+    }
+
     public function testInvokableDefinitionWithInputAttribute()
     {
         $application = new Application();
@@ -346,6 +371,30 @@ class CommandTesterTest extends TestCase
                   --admin %S
                   --active|--no-active %S
                   --status=STATUS                         [default: "unverified"]
+            %A
+            TXT;
+
+        self::assertSame(0, $statusCode);
+        self::assertStringMatchesFormat($expectedOutput, $bufferedOutput->fetch());
+    }
+
+    public function testMethodBasedCommandWithApplication()
+    {
+        $command = new MethodBasedTestCommand();
+
+        $application = new Application();
+        $application->addCommand($command->cmd1(...));
+        $application->setAutoExit(false);
+
+        $bufferedOutput = new BufferedOutput();
+        $statusCode = $application->run(new ArrayInput(['command' => 'help', 'command_name' => 'app:cmd1']), $bufferedOutput);
+
+        $expectedOutput = <<<TXT
+            Usage:
+              app:cmd1 [<name>]
+
+            Arguments:
+              name %S
             %A
             TXT;
 
@@ -509,5 +558,87 @@ class CommandTesterTest extends TestCase
 
         self::assertStringContainsString('Enter arg1', $tester->getDisplay());
         self::assertStringContainsString('Arg1: arg1-value', $tester->getDisplay());
+    }
+
+    public function testInvokableWithInteractiveChoiceAttribute()
+    {
+        $tester = new CommandTester(new InvokableWithInteractiveChoiceAttributeTestCommand());
+        $tester->setInputs(['green', '', 'active', 'auth,cache']);
+        $tester->execute([], ['interactive' => true]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('Select a color', $tester->getDisplay());
+        self::assertStringContainsString('Color: green', $tester->getDisplay());
+        self::assertStringContainsString('Select a size', $tester->getDisplay());
+        self::assertStringContainsString('Size: medium', $tester->getDisplay());
+        self::assertStringContainsString('Select a status', $tester->getDisplay());
+        self::assertStringContainsString('Status: active', $tester->getDisplay());
+        self::assertStringContainsString('Select features', $tester->getDisplay());
+        self::assertStringContainsString('Features: auth,cache', $tester->getDisplay());
+    }
+
+    public function testInvokableWithInteractiveChoiceAttributeNonDefaultValues()
+    {
+        $tester = new CommandTester(new InvokableWithInteractiveChoiceAttributeTestCommand());
+        $tester->setInputs(['blue', 'large', 'pending', 'api']);
+        $tester->execute([], ['interactive' => true]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('Color: blue', $tester->getDisplay());
+        self::assertStringContainsString('Size: large', $tester->getDisplay());
+        self::assertStringContainsString('Status: pending', $tester->getDisplay());
+        self::assertStringContainsString('Features: api', $tester->getDisplay());
+    }
+
+    public function testInvokableWithInteractiveChoiceAttributeInvalidThenValid()
+    {
+        $tester = new CommandTester(new InvokableWithInteractiveChoiceAttributeTestCommand());
+        // First input 'yellow' is invalid, then 'red' is valid
+        $tester->setInputs(['yellow', 'red', 'medium', 'active', 'auth']);
+        $tester->execute([], ['interactive' => true]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('Value "yellow" is invalid', $tester->getDisplay());
+        self::assertStringContainsString('Color: red', $tester->getDisplay());
+    }
+
+    public function testInvokableWithInteractiveChoiceAttributeInvalidEnumValue()
+    {
+        $tester = new CommandTester(new InvokableWithInteractiveChoiceAttributeTestCommand());
+        // 'unknown' is not a valid enum value, then 'inactive' is valid
+        $tester->setInputs(['red', 'medium', 'unknown', 'inactive', 'api']);
+        $tester->execute([], ['interactive' => true]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('Value "unknown" is invalid', $tester->getDisplay());
+        self::assertStringContainsString('Status: inactive', $tester->getDisplay());
+    }
+
+    public function testInvokableWithInteractiveChoiceAttributeInvalidChoiceNumber()
+    {
+        $tester = new CommandTester(new InvokableWithInteractiveChoiceAttributeTestCommand());
+        // '5' is not a valid choice number, then '1' (inactive) is valid
+        $tester->setInputs(['red', 'medium', '5', '1', 'api']);
+        $tester->execute([], ['interactive' => true]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('Value "5" is invalid', $tester->getDisplay());
+        self::assertStringContainsString('Status: inactive', $tester->getDisplay());
+    }
+
+    public function testChoiceWithoutChoicesAndWithoutEnumThrowsException()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('requires either explicit choices or a BackedEnum type');
+
+        $command = new Command('foo');
+        $command->setCode(static function (
+            #[Argument, AskChoice('Select a color')]
+            string $color,
+        ): int {
+            return 0;
+        });
+
+        $command->getDefinition();
     }
 }

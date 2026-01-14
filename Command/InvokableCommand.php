@@ -86,10 +86,10 @@ class InvokableCommand implements SignalableCommandInterface
             }
 
             if ($input = MapInput::tryFrom($parameter)) {
-                $inputArguments = array_map(fn (Argument $a) => $a->toInputArgument(), iterator_to_array($input->getArguments(), false));
+                $inputArguments = array_map(static fn (Argument $a) => $a->toInputArgument(), iterator_to_array($input->getArguments(), false));
 
                 // make sure optional arguments are defined after required ones
-                usort($inputArguments, fn (InputArgument $a, InputArgument $b) => (int) $b->isRequired() - (int) $a->isRequired());
+                usort($inputArguments, static fn (InputArgument $a, InputArgument $b) => (int) $b->isRequired() - (int) $a->isRequired());
 
                 foreach ($inputArguments as $inputArgument) {
                     $definition->addArgument($inputArgument);
@@ -162,6 +162,7 @@ class InvokableCommand implements SignalableCommandInterface
                 OutputInterface::class => $output,
                 Cursor::class => new Cursor($output),
                 SymfonyStyle::class => new SymfonyStyle($input, $output),
+                Command::class => $this->command,
                 Application::class => $this->command->getApplication(),
                 default => throw new RuntimeException(\sprintf('Unsupported type "%s" for parameter "$%s".', $type->getName(), $parameter->getName())),
             };
