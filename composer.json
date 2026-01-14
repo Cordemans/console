@@ -1,5 +1,5 @@
 {
-    "name": "cordemans/console",
+    "name": "symfony/console",
     "type": "library",
     "description": "symfony/console fork with PHP_SELF replaced",
     "keywords": ["console", "cli", "command-line", "terminal"],
@@ -42,9 +42,6 @@
         "exclude-from-classmap": [
             "/Tests/"
         ]
-    },
-    "replace": {
-        "symfony/console": "*"
     },
     "minimum-stability": "dev"
 }
